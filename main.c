@@ -82,6 +82,8 @@ int main(int argc, char *argv[]) {
     char contents[MAX_STRING_SIZE];
     fgets(contents, MAX_STRING_SIZE, file);
     interpret(contents);
+
+    fclose(file);
   }
 
   return EXIT_SUCCESS;
