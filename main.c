@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_STRING_SIZE 10000
 
@@ -55,6 +56,32 @@ int main(int argc, char *argv[]) {
 
   if (argc == 1) {
     launch_interactive();
+  }
+
+  if (!strcmp(argv[1], "-h")) {
+    printf("Usage: myshell [OPTIONS]\n");
+    printf("-c, --command <COMMAND>  Command string to be executed\n");
+    printf("-f, --file <FILE>        File to be executed\n");
+    printf("-h, --help               Print help\n");
+    printf("\n");
+    printf("Use myshell without options to enter interactive mode\n");
+    return EXIT_SUCCESS;
+  }
+
+  if (!strcmp(argv[1], "-c")) {
+    interpret(argv[2]);
+  }
+
+  if (!strcmp(argv[1], "-f")) {
+    FILE *file = fopen(argv[2], "r");
+    if (!file) {
+      fprintf(stderr, "Error opening file\n");
+      return EXIT_FAILURE;
+    }
+
+    char contents[MAX_STRING_SIZE];
+    fgets(contents, MAX_STRING_SIZE, file);
+    interpret(contents);
   }
 
   return EXIT_SUCCESS;
