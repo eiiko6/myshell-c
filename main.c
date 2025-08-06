@@ -2,89 +2,98 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_STRING_SIZE 10000
-
-int execute(char *command) {
+void execute(char *command) {
+  // Kinda cheating here, since we're using sh
   system(command);
-  return 1;
 }
 
-int interpret(char *input) {
-  char part[MAX_STRING_SIZE];
+void interpret(char *input) {
   int cursor = 0;
-  for (int i = 0; i < MAX_STRING_SIZE; ++i) {
+  for (int i = 0; input[i] != '\0'; ++i) {
     if (input[i] == '\0')
       break;
 
     if (input[i] == ';') {
       input[i] = '\0';
-      execute(input + cursor);
+      if (*(input + cursor) != '\0') { // Skip empty parts
+        execute(input + cursor);
+      }
+
+      // Set cursor to the start of the next part
       cursor = i + 1;
       continue;
     }
   }
 
   execute(input + cursor);
-
-  return 0;
 }
 
 int launch_interactive() {
+  char *line = NULL;
+  size_t len = 0;
+
   while (1) {
     printf("> ");
 
-    char s[10000];
-    fgets(s, sizeof(s), stdin);
-
-    for (int i = 0; i < MAX_STRING_SIZE; ++i) {
-      if (s[i] == '\n') {
-        s[i] = '\0';
-        break;
-      }
+    if (getline(&line, &len, stdin) == -1) {
+      break;
     }
 
-    interpret(s);
+    line[strcspn(line, "\n")] = '\0'; // EOF at newline
+
+    interpret(line);
   }
 
+  free(line);
   return 0;
 }
 
-int main(int argc, char *argv[]) {
-  // for (int i = 1; i < argc; ++i) {
-  //   printf("Arg %d: %s\n", i, argv[i]);
-  // }
+void print_usage() {
+  printf("Usage: myshell [OPTIONS]\n\n");
+  printf("Options:\n");
+  printf("  -c, --command <COMMAND>  Command string to be executed\n");
+  printf("  -f, --file <FILE>        File to be executed\n");
+  printf("  -h, --help               Print help\n");
+  printf("\n");
+  printf("Use myshell without options to enter interactive mode\n");
+}
 
+int main(int argc, char *argv[]) {
   if (argc == 1) {
     launch_interactive();
-  }
-
-  if (!strcmp(argv[1], "-h")) {
-    printf("Usage: myshell [OPTIONS]\n");
-    printf("-c, --command <COMMAND>  Command string to be executed\n");
-    printf("-f, --file <FILE>        File to be executed\n");
-    printf("-h, --help               Print help\n");
-    printf("\n");
-    printf("Use myshell without options to enter interactive mode\n");
     return EXIT_SUCCESS;
   }
 
-  if (!strcmp(argv[1], "-c")) {
-    interpret(argv[2]);
+  if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
+    print_usage();
+    return EXIT_SUCCESS;
   }
 
-  if (!strcmp(argv[1], "-f")) {
+  if (!strcmp(argv[1], "-c") || !strcmp(argv[1], "--command")) {
+    interpret(argv[2]);
+    return EXIT_SUCCESS;
+  }
+
+  if (!strcmp(argv[1], "-f") || !strcmp(argv[1], "--file")) {
     FILE *file = fopen(argv[2], "r");
     if (!file) {
-      fprintf(stderr, "Error opening file\n");
+      fprintf(stderr, "Error opening file: %s\n", argv[2]);
       return EXIT_FAILURE;
     }
 
-    char contents[MAX_STRING_SIZE];
-    fgets(contents, MAX_STRING_SIZE, file);
-    interpret(contents);
+    char *line = NULL;
+    size_t len = 0;
+    while (getline(&line, &len, file) != -1) {
+      line[strcspn(line, "\n")] = '\0'; // EOF at newline
+      interpret(line);
+    }
 
+    free(line);
     fclose(file);
+    return EXIT_SUCCESS;
   }
 
-  return EXIT_SUCCESS;
+  printf("Unknown option: %s\n\n", argv[1]);
+  printf("For more information, try '--help'\n");
+  return EXIT_FAILURE;
 }
